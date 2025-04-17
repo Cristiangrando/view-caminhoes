@@ -1,1 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Mapa com Caminhões em Tempo Real</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+      #map { height: 100vh; width: 100%; }
+      body { margin: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      const map = L.map('map').setView([-23.55, -46.63], 6);
 
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+      }).addTo(map);
+
+      const csvUrl = 'https://corsproxy.io/?https://docs.google.com/spreadsheets/d/e/2PACX-1vSPTSY51FEOp-2EVk1PaXv7iwJd2NmPlBBAP5pmX05D-BfWIv-72L07AhEFd88ag6NmWyB9lm1RpPIs/pub?gid=0&single=true&output=csv';
+
+      const truckIcon = L.icon({
+        iconUrl: 'https://cdn-icons-png.flaticon.com/512/286/286112.png',
+        iconSize: [40, 40],
+        iconAnchor: [20, 40],
+        popupAnchor: [0, -40]
+      });
+
+      let markersLayer = L.layerGroup().addTo(map);
+      let truckMarkers = {}; // Armazena os marcadores para evitar duplicação
+
+      function atualizarPins() {
+        fetch(csvUrl)
+          .then(response => response.text())
+          .then(csvText => {
+            const lines = csvText.split('\n').slice(1);
+
+            // Limpa os markers anteriores
+            markersLayer.clearLayers();
+
+            // Adiciona novos pins
+            lines.forEach(line => {
+              const cols = line.split(',');
+
+              const id = cols[0];
+              const name = cols[1];
+              const lat = parseFloat(cols[2]);
+              const lng = parseFloat(cols[3]);
+
+              if (!isNaN(lat) && !isNaN(lng)) {
+                const marker = L.marker([lat, lng], { icon: truckIcon })
+                  .bindPopup(name)
+                  .addTo(markersLayer);
+
+                truckMarkers[id] = marker;
+              }
+            });
+          })
+          .catch(error => console.error('Erro ao atualizar mapa:', error));
+      }
+
+      // Atualiza pela primeira vez
+      atualizarPins();
+
+      // Atualiza a cada 2 segundos
+      setInterval(() => {
+        atualizarPins();
+      }, 2000); // Intervalo de 2 segundos
+    </script>
+  </body>
+</html>
